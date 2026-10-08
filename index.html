@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant POS System</title>
+    <title>Edwin's Lomi House | Restaurant POS</title>
 
     <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,6 +19,58 @@
 
 <body>
 
+<section id="authScreen" class="auth-screen" aria-labelledby="authTitle">
+    <div class="auth-card">
+        <div class="auth-brand">
+            <div class="auth-logo">
+                <i class="fa-solid fa-utensils"></i>
+                <img class="logo-image" alt="">
+            </div>
+            <span>EDWIN'S LOMI HOUSE</span>
+        </div>
+
+        <div class="auth-heading">
+            <h1 id="authTitle">Welcome back</h1>
+            <p id="authSubtitle">Sign in to continue to your restaurant POS.</p>
+        </div>
+
+        <div class="auth-tabs" role="tablist" aria-label="Account access">
+            <button id="signInTab" class="auth-tab active" type="button" role="tab" aria-selected="true" aria-controls="signInForm" onclick="showAuthForm('signIn')">Sign In</button>
+            <button id="signUpTab" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="signUpForm" onclick="showAuthForm('signUp')">Sign Up</button>
+        </div>
+
+        <form id="signInForm" class="auth-form" autocomplete="on">
+            <label for="signInEmail">Email address</label>
+            <input id="signInEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+
+            <label for="signInPassword">Password</label>
+            <input id="signInPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+
+            <button class="primary-btn auth-submit" type="submit">Sign In <i class="fa-solid fa-arrow-right"></i></button>
+        </form>
+
+        <form id="signUpForm" class="auth-form hidden" autocomplete="on">
+            <label for="signUpName">Full name</label>
+            <input id="signUpName" name="name" type="text" autocomplete="name" placeholder="Your name" maxlength="80" required>
+
+            <label for="signUpEmail">Email address</label>
+            <input id="signUpEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+
+            <label for="signUpPassword">Password</label>
+            <input id="signUpPassword" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required>
+
+            <label for="signUpPasswordConfirm">Confirm password</label>
+            <input id="signUpPasswordConfirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="8" placeholder="Re-enter your password" required>
+
+            <button class="primary-btn auth-submit" type="submit">Create Account <i class="fa-solid fa-arrow-right"></i></button>
+        </form>
+
+        <button id="resendConfirmationButton" class="auth-resend hidden" type="button">Resend confirmation email</button>
+        <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+        <p class="auth-footnote">Secure sign-in powered by Supabase.</p>
+    </div>
+</section>
+
 <div class="app">
 
     <!-- ================= SIDEBAR ================= -->
@@ -27,10 +79,11 @@
         <div class="logo">
             <div class="logo-icon">
                 <i class="fa-solid fa-utensils"></i>
+                <img class="logo-image" alt="Edwin's Lomi House logo">
             </div>
 
             <div>
-                        <h2>Dabarkads</h2>
+                <h2>Edwin's Lomi House</h2>
                 <span>Restaurant POS</span>
             </div>
         </div>
@@ -970,6 +1023,21 @@
             <div class="settings-grid">
 
                 <div class="settings-card">
+                    <h3>Restaurant Logo</h3>
+                    <div class="logo-upload">
+                        <div id="logoUploadPreview" class="logo-upload-preview" aria-hidden="true">
+                            <i class="fa-solid fa-utensils"></i>
+                            <img class="logo-image" alt="">
+                        </div>
+                        <div class="logo-upload-control">
+                            <label for="restaurantLogoInput">Choose a logo image</label>
+                            <input id="restaurantLogoInput" type="file" accept="image/*">
+                            <small id="logoUploadStatus" role="status" aria-live="polite">Your logo is saved in this browser.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
                     <h3>Order Settings</h3>
 
                     <label class="toggle-row" data-setting="dinein">
@@ -1273,6 +1341,7 @@
         </div>
         <p class="account-switcher-help">Choose an active cashier or administrator account.</p>
         <div id="accountOptions" class="account-options"></div>
+        <button class="secondary-btn auth-sign-out" type="button" onclick="signOut()">Sign Out</button>
     </div>
 </div>
 
@@ -1399,7 +1468,10 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script src="script.js"></script>
+<script src="auth.js"></script>
 
 </body>
 </html>

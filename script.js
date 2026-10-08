@@ -300,6 +300,67 @@ function writeStoredData(key, value) {
     }
 }
 
+function updateRestaurantLogo(imageData) {
+    document.querySelectorAll(".logo-image").forEach(image => {
+        image.src = imageData;
+        image.closest(".logo-icon, .logo-upload-preview, .auth-logo").classList.add("has-image");
+    });
+}
+
+function restoreRestaurantLogo() {
+    const status = document.getElementById("logoUploadStatus");
+
+    try {
+        const savedLogo = localStorage.getItem("foodHubRestaurantLogo");
+
+        if (savedLogo) {
+            updateRestaurantLogo(savedLogo);
+        }
+    } catch {
+        status.textContent = "Unable to load the saved logo from this browser.";
+    }
+}
+
+const restaurantLogoInput = document.getElementById("restaurantLogoInput");
+restaurantLogoInput.addEventListener("change", function () {
+    const file = this.files[0];
+    const status = document.getElementById("logoUploadStatus");
+
+    if (!file) {
+        return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+        status.textContent = "Choose an image file to use as the logo.";
+        this.value = "";
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = event => {
+        if (typeof event.target.result !== "string") {
+            status.textContent = "The selected logo could not be read.";
+            return;
+        }
+
+        try {
+            localStorage.setItem("foodHubRestaurantLogo", event.target.result);
+        } catch {
+            status.textContent = "The logo could not be saved. Try a smaller image.";
+            return;
+        }
+
+        updateRestaurantLogo(event.target.result);
+        status.textContent = "Logo saved in this browser.";
+    };
+    reader.onerror = () => {
+        status.textContent = "The selected logo could not be read.";
+    };
+    reader.readAsDataURL(file);
+});
+
+restoreRestaurantLogo();
+
 function getStaffData() {
     return readStoredData("foodHubStaff") || [];
 }
@@ -1652,7 +1713,7 @@ function generateReceiptHtml(order) {
 
     return `
         <div class="receipt-header">
-            <h4>Dabarkads</h4>
+            <h4>Edwin's Lomi House</h4>
             <small>Restaurant POS</small>
         </div>
 
