@@ -103,13 +103,7 @@ function showPage(pageId, clickedButton = null) {
 /* ================= POS ORDER ================= */
 
 let cart = [];
-let savedOrderNumber = 0;
-
-try {
-    savedOrderNumber = Number.parseInt(localStorage.getItem("foodHubNextOrderNumber"), 10);
-} catch {
-    savedOrderNumber = 0;
-}
+const savedOrderNumber = Number.parseInt(readStoredData("foodHubNextOrderNumber"), 10);
 
 let nextOrderNumber = Number.isInteger(savedOrderNumber) && savedOrderNumber >= 1029 ? savedOrderNumber : 1029;
 let selectedPaymentMethod = "Cash";
@@ -279,10 +273,7 @@ function attachProductImageFallback(card, category) {
 }
 
 function saveNextOrderNumber() {
-    try {
-        localStorage.setItem("foodHubNextOrderNumber", String(nextOrderNumber));
-    } catch {
-    }
+    writeStoredData("foodHubNextOrderNumber", nextOrderNumber);
 }
 
 function readStoredData(key) {
@@ -297,7 +288,9 @@ function writeStoredData(key, value) {
     try {
         localStorage.setItem(key, JSON.stringify(value));
     } catch {
+        console.error(`Unable to cache ${key} in this browser.`);
     }
+    window.posBackend?.save(key, value);
 }
 
 function updateRestaurantLogo(imageData) {
@@ -311,11 +304,17 @@ function restoreRestaurantLogo() {
     const status = document.getElementById("logoUploadStatus");
 
     try {
-        const savedLogo = localStorage.getItem("foodHubRestaurantLogo");
+        const savedLogo = readStoredData("foodHubRestaurantLogo");
 
         if (savedLogo) {
             updateRestaurantLogo(savedLogo);
+        } else {
+            document.querySelectorAll(".logo-image").forEach(image => {
+                image.removeAttribute("src");
+                image.closest(".logo-icon, .logo-upload-preview, .auth-logo")?.classList.remove("has-image");
+            });
         }
+        status.textContent = "";
     } catch {
         status.textContent = "Unable to load the saved logo from this browser.";
     }
@@ -343,15 +342,10 @@ restaurantLogoInput.addEventListener("change", function () {
             return;
         }
 
-        try {
-            localStorage.setItem("foodHubRestaurantLogo", event.target.result);
-        } catch {
-            status.textContent = "The logo could not be saved. Try a smaller image.";
-            return;
-        }
+        writeStoredData("foodHubRestaurantLogo", event.target.result);
 
         updateRestaurantLogo(event.target.result);
-        status.textContent = "Logo saved in this browser.";
+        status.textContent = "Logo saved.";
     };
     reader.onerror = () => {
         status.textContent = "The selected logo could not be read.";
@@ -1082,18 +1076,10 @@ function restoreInventory() {
     }
 
     inventoryTableBody.innerHTML = "";
-    const savedItems = Array.isArray(storedInventory) ? storedInventory : [];
-    const savedByName = new Map(savedItems.map(item => [item.name.toLowerCase(), item]));
+    const savedItems = Array.isArray(storedInventory) ? storedInventory : defaultInventoryIngredients;
     const groupedIngredients = new Map();
 
-    defaultInventoryIngredients.forEach(ingredient => {
-        const savedItem = savedByName.get(ingredient.name.toLowerCase());
-        const item = {
-            ...ingredient,
-            stock: savedItem ? savedItem.stock : ingredient.stock,
-            reorderLevel: savedItem ? savedItem.reorderLevel : ingredient.reorderLevel
-        };
-
+    savedItems.forEach(item => {
         if (!groupedIngredients.has(item.category)) {
             groupedIngredients.set(item.category, []);
         }
@@ -2048,18 +2034,21 @@ function getSettingKey(checkbox) {
 
 function restoreSettings() {
     const savedSettings = readStoredData("foodHubSettings");
+    const checkboxes = document.querySelectorAll('#settings .toggle-row input[type="checkbox"]');
 
-    if (!savedSettings || typeof savedSettings !== "object") {
-        return;
-    }
-
-    document.querySelectorAll('#settings .toggle-row input[type="checkbox"]').forEach(checkbox => {
-        const key = getSettingKey(checkbox);
-
-        if (key in savedSettings) {
-            checkbox.checked = savedSettings[key];
-        }
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = checkbox.defaultChecked;
     });
+
+    if (savedSettings && typeof savedSettings === "object") {
+        checkboxes.forEach(checkbox => {
+            const key = getSettingKey(checkbox);
+
+            if (key in savedSettings) {
+                checkbox.checked = savedSettings[key];
+            }
+        });
+    }
 }
 
 function saveSettings() {
@@ -2378,8 +2367,33 @@ document.addEventListener("click", function(event) {
         event.target.style.background = "#777";
 
     }
-
 });
+
+window.refreshPOSFromBackend = function () {
+    const remoteOrderNumber = Number.parseInt(readStoredData("foodHubNextOrderNumber"), 10);
+    nextOrderNumber = Number.isInteger(remoteOrderNumber) && remoteOrderNumber >= 1029
+        ? remoteOrderNumber
+        : 1029;
+
+    restoreRestaurantLogo();
+    restoreProducts();
+    restoreInventory();
+    restoreSettings();
+    settingsCheckboxes.forEach(syncCheckboxVisualState);
+    syncOrderSettingStates();
+    renderStaff();
+    updateVisibleAccount();
+    removeOrderHistoryFromView();
+    restoreOrders();
+    restoreKitchenOrders();
+    restoreOrderStatuses();
+    updateInventoryStats();
+    updateTotalOrders();
+    updateSalesReports();
+    updateKitchenCounts();
+    updateDashboard();
+    updateCurrentOrderNumber();
+};
 
 restoreProducts();
 restoreInventory();

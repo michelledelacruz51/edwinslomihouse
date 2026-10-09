@@ -522,6 +522,14 @@ nav {
     color: #73d39a;
 }
 
+.settings-toast.backend-error {
+    background: #8f2f2f;
+}
+
+.settings-toast.backend-error i {
+    color: white;
+}
+
 .avatar {
     width: 36px;
     height: 36px;

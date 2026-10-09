@@ -6,6 +6,9 @@ const signInForm = document.getElementById("signInForm");
 const signUpForm = document.getElementById("signUpForm");
 const resendConfirmationButton = document.getElementById("resendConfirmationButton");
 let supabaseClient;
+let activeUserId = "";
+let activationInProgress = null;
+let activationGeneration = 0;
 
 function setAuthMessage(message, type = "") {
     authMessage.textContent = message;
@@ -43,11 +46,69 @@ function setAuthenticatedUser(user) {
     authScreen.setAttribute("aria-hidden", "true");
 }
 
-function showSignIn(message = "") {
+function showSignIn(message = "", type = "") {
     document.body.classList.remove("is-authenticated");
     authScreen.setAttribute("aria-hidden", "false");
     showAuthForm("signIn");
-    setAuthMessage(message);
+    setAuthMessage(message, type);
+}
+
+async function activateSession(session) {
+    if (!session?.user || !session.access_token) {
+        return;
+    }
+
+    const userId = session.user.id;
+    if (activeUserId === userId) {
+        window.posBackend.setAccessToken(session.access_token);
+        return;
+    }
+
+    if (activationInProgress?.userId === userId) {
+        activationInProgress.session = session;
+        window.posBackend.setAccessToken(session.access_token);
+        return activationInProgress.promise;
+    }
+
+    const generation = ++activationGeneration;
+    const activationState = { userId, session, promise: null };
+    window.posBackend.clear();
+    activationState.promise = (async () => {
+        setAuthMessage("Loading your restaurant data...");
+
+        try {
+            const loaded = await window.posBackend.load(
+                userId,
+                session.access_token,
+                () => generation === activationGeneration
+            );
+            if (!loaded || generation !== activationGeneration) {
+                return;
+            }
+        } catch (error) {
+            if (generation !== activationGeneration) {
+                return;
+            }
+            showSignIn(`Unable to load restaurant data: ${error.message}`, "error");
+            return;
+        }
+
+        if (generation !== activationGeneration) {
+            return;
+        }
+
+        const currentSession = activationState.session;
+        activeUserId = userId;
+        window.posBackend.setAccessToken(currentSession.access_token);
+        window.refreshPOSFromBackend();
+        setAuthenticatedUser(currentSession.user);
+    })();
+    activationInProgress = activationState;
+    await activationState.promise;
+
+    if (activationInProgress === activationState) {
+        activationInProgress = null;
+    }
 }
 
 function requireSupabaseClient() {
@@ -93,7 +154,7 @@ signInForm.addEventListener("submit", async event => {
         return;
     }
 
-    setAuthenticatedUser(data.user);
+    await activateSession(data.session);
 });
 
 resendConfirmationButton.addEventListener("click", async () => {
@@ -165,7 +226,7 @@ signUpForm.addEventListener("submit", async event => {
     }
 
     if (data.session && data.user) {
-        setAuthenticatedUser(data.user);
+        await activateSession(data.session);
         return;
     }
 
@@ -187,6 +248,10 @@ async function signOut() {
     }
 
     closeAccountSwitcher();
+    activeUserId = "";
+    activationGeneration += 1;
+    activationInProgress = null;
+    window.posBackend.clear();
     showSignIn("You have been signed out.", "success");
 }
 
@@ -207,8 +272,12 @@ function initializeSupabaseAuth() {
 
     supabaseClient.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
-            setAuthenticatedUser(session.user);
+            void activateSession(session);
         } else {
+            activeUserId = "";
+            activationGeneration += 1;
+            activationInProgress = null;
+            window.posBackend.clear();
             showSignIn();
         }
     });
